@@ -20,9 +20,9 @@ export HP_JDBC_USER=
 export HP_JDBC_PW=
  */
 public class InnReservations {
-   private void setup() {
+   private static void setup() {
       try {
-         Class.forName("com.mysql.jdbc.Driver");
+         Class.forName("com.mysql.cj.jdbc.Driver");
          System.out.println("MySQL JDBC Driver loaded");
       } catch (ClassNotFoundException ex) {
          System.err.println("Unable to load JDBC Driver");
@@ -69,5 +69,6 @@ public class InnReservations {
 
    public static void main(String[] arg) {
       System.out.println("Hello, World!");
+      setup();
    }
 }
