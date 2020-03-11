@@ -1,12 +1,12 @@
 # Inn Reservations
 CSC 365: CLI for INN reservations
 
-Nicole Schwartz
-Ty Farrris
-Lauren Hibbs
-Steven Gandham
-Caitlin Settles
-Sarah Bae
+Nicole Schwartz  
+Ty Farrris  
+Lauren Hibbs  
+Steven Gandham  
+Caitlin Settles  
+Sarah Bae  
 
 # How to run
 ```

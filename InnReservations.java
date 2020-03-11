@@ -1,4 +1,5 @@
 import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
 import java.sql.Statement;
 import java.sql.Connection;
 import java.sql.SQLException;
@@ -20,6 +21,9 @@ export HP_JDBC_USER=
 export HP_JDBC_PW=
  */
 public class InnReservations {
+   private static final String RESERVATIONS_TABLE = "shbae.lab7_reservations";
+   private static final String ROOMS_TABLE = "shbae.lab7_rooms";
+
    private static void setup() {
       try {
          Class.forName("com.mysql.cj.jdbc.Driver");
@@ -30,45 +34,43 @@ public class InnReservations {
       }
    }
 
-   private void example() throws SQLException {
+   /*
+    * Prints all rows/columns from the specified table.
+    */
+   private static void example(String table) throws SQLException {
       try (Connection conn = DriverManager.getConnection(System.getenv("HP_JDBC_URL"),
                                                                  System.getenv("HP_JDBC_USER"),
                                                                  System.getenv("HP_JDBC_PW"))) {
-         Scanner scanner = new Scanner(System.in);
-         System.out.print("Find pastries with price <=: ");
-         Double price = Double.valueOf(scanner.nextLine());
-         System.out.print("Filter by flavor (or 'Any'): ");
-         String flavor = scanner.nextLine();
+            // Step 2: Construct SQL statement
+            String sql = "SELECT * FROM " + table;
 
-         List<Object> params = new ArrayList<Object>();
-         params.add(price);
-         StringBuilder sb = new StringBuilder("SELECT * FROM hp_goods WHERE price <= ?");
-         if (!"any".equalsIgnoreCase(flavor)) {
-             sb.append(" AND Flavor = ?");
-             params.add(flavor);
-         }
-         
-         try (PreparedStatement pstmt = conn.prepareStatement(sb.toString())) {
-             int i = 1;
-             for (Object p : params) {
-                 pstmt.setObject(i++, p);
-             }
+            conn.setAutoCommit(false);
 
-             try (ResultSet rs = pstmt.executeQuery()) {
-                 System.out.println("Matching Pastries:");
-                 int matchCount = 0;
-                 while (rs.next()) {
-                     System.out.format("%s %s ($%.2f) %n", rs.getString("Flavor"), rs.getString("Food"), rs.getDouble("price"));
-                     matchCount++;
-                 }
-                 System.out.format("----------------------%nFound %d match%s %n", matchCount, matchCount == 1 ? "" : "es");
-             }
-         }
+            // Step 4: Send SQL statement to DBMS
+            try (Statement stmt = conn.createStatement();
+               ResultSet rs = stmt.executeQuery(sql);) {
+
+               ResultSetMetaData rsmd = rs.getMetaData();
+               int columnsNumber = rsmd.getColumnCount();
+                // Step 5: Receive results
+               while (rs.next()) {
+                  for (int i = 1; i <= columnsNumber; i++) {
+                     if (i > 1) System.out.print(",\t");
+                        String columnValue = rs.getString(i);
+                     System.out.print(rsmd.getColumnName(i) + ": " + columnValue);
+                  }
+                  System.out.println("");
+               }
+               conn.commit();
+            } catch (SQLException e) {
+               conn.rollback();
+            }
       }
    }
 
-   public static void main(String[] arg) {
+   public static void main(String[] arg) throws SQLException {
       System.out.println("Hello, World!");
       setup();
+      example(RESERVATIONS_TABLE);
    }
 }
