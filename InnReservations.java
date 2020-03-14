@@ -1,5 +1,4 @@
 import java.sql.ResultSet;
-import java.sql.ResultSetMetaData;
 import java.sql.Statement;
 import java.sql.Connection;
 import java.sql.SQLException;
@@ -22,10 +21,7 @@ export HP_JDBC_USER=
 export HP_JDBC_PW=
  */
 public class InnReservations {
-   private static final String RESERVATIONS_TABLE = "shbae.lab7_reservations";
-   private static final String ROOMS_TABLE = "shbae.lab7_rooms";
-
-   private static void setup() {
+   private void setup() {
       try {
          Class.forName("com.mysql.cj.jdbc.Driver");
          System.out.println("MySQL JDBC Driver loaded");
@@ -35,27 +31,13 @@ public class InnReservations {
       }
    }
 
-   private void fr5(String[] arg) throws SQLException {
+   private void fr5(String[] arg) throws SQLException 
+   {
       //Step 1: Establish connection to RBDMS
       try (Connection conn = DriverManager.getConnection(System.getenv("HP_JDBC_URL"), 
                                                          System.getenv("HP_JDBC_USER"),
                                                          System.getenv("HP_JDBC_PW"))) {
-        Scanner scanner = new Scanner(System.in);
-        System.out.print("Number of filters: ");
-        int numFilters = Integer.valueOf(scanner.next());
         
-        //parse input
-        System.out.println("Filter options: FirstName, LastName, Date, RoomCode, ReservCode\n");
-        ArrayList<String> filters = new ArrayList<String>();
-        for(int i = 0; i < numFilters; i++)
-        {
-            System.out.printf("Filter %d by: ", i + 1);
-            String filterType = scanner.next();
-            filters.add(filterType);
-            System.out.printf("Enter %s: ", filterType);
-            filters.add(scanner.next());
-            System.out.println();
-        }
 
         //Step 2: Construct SQL statement;
         String query = "SELECT reservations.Code, reservations.Room, rooms.RoomName, ";
@@ -63,39 +45,104 @@ public class InnReservations {
         query += "reservations.FirstName, reservations.Adults, reservations.Kids ";
         query += "FROM shbae.lab7_reservations as reservations ";
         query += "JOIN shbae.lab7_rooms as rooms ON reservations.Room = rooms.RoomCode ";
-        query += "WHERE reservations.Room = ?";
 
-        System.out.println(query);
+
+        //parse input
+        List<Object> params = new ArrayList<Object>();
+        Scanner scanner = new Scanner(System.in);
+        System.out.print("Number of filters: ");
+        int numFilters = Integer.valueOf(scanner.next());
+        System.out.println("Filter options: FirstName, LastName, Date, Room, Code\n");
+
+        for(int i = 0; i < numFilters; i++)
+        {
+            System.out.printf("Filter %d by: ", i + 1);
+            String filterType = scanner.next();
+
+            if (filterType.equals("FirstName"))
+            {
+              query += "WHERE reservations.FirstName = ?";
+              System.out.print("Enter FirstName: ");
+              params.add(scanner.next());
+              System.out.println();
+            }
+            else if (filterType.equals("LastName"))
+            {
+              query += "WHERE reservations.LastName = ?";
+              System.out.print("Enter LastName: ");
+              params.add(scanner.next());
+              System.out.println();
+            }
+            else if (filterType.equals("Date")) 
+            {
+              query += "WHERE reservations.CheckIn >= ?";
+              System.out.print("Enter CheckIn (YYYY-MM-DD): ");
+              params.add(LocalDate.parse(scanner.next()));
+
+              query += "AND reservations.Checkout <= ?";
+              System.out.print("Enter CheckOut (YYYY-MM-DD): ");
+              params.add(LocalDate.parse(scanner.next()));
+              System.out.println(); 
+            }
+            else if (filterType.equals("Room")) 
+            {  
+              query += "WHERE reservations.Room = ?";
+              System.out.print("Enter Room: ");
+              params.add(scanner.next());
+              System.out.println();  
+            }
+            else if (filterType.equals("Code")) 
+            {
+              query += "WHERE reservations.Code = ?";
+              System.out.print("Enter Code: ");
+              params.add(Integer.valueOf(scanner.next()));
+              System.out.println();  
+            }
+            else 
+            {
+              System.out.println("Inavlid input. Options are FirstName, LastName, Date, Room, Code");
+              System.exit(-1);
+            }
+        }
+        //System.out.println(query);
+
         //Step 3: Start transaction
         conn.setAutoCommit(false);
 
 
-        try (PreparedStatement pstmt = conn.prepareStatement(query)) {
+        try (PreparedStatement pstmt = conn.prepareStatement(query)) 
+        {
 
           //Step 4: Send SQL statement to DBMS
-          pstmt.setString(1, filters.get(1));
-          ResultSet rs = pstmt.executeQuery();
-
-          //Step 5: Handle results
-          String output = "";
-          System.out.println("\nCode, Room, RoomName, CheckIn, CheckOut, LastName, FirstName, Adults, Kids");
-          while (rs.next()) {
-
-            System.out.printf("%d, %s, %s, %s, %s, %s, %s, %d, %d\n", rs.getInt("reservations.Code"), 
-                                                                    rs.getString("reservations.Room"), 
-                                                                    rs.getString("rooms.RoomName"),
-                                                                    rs.getDate("reservations.checkIn").toString(), 
-                                                                    rs.getDate("reservations.checkOut").toString(), 
-                                                                    rs.getString("reservations.LastName"),
-                                                                    rs.getString("reservations.FirstName"), 
-                                                                    rs.getInt("reservations.Adults"),
-                                                                    rs.getInt("reservations.Kids"));
+          int k = 1;
+          for (Object p: params)
+          {
+            pstmt.setObject(k++, p);
           }
-
-          //Step 6: Commit or rollback transaction
-          conn.commit();
+          
+          try (ResultSet rs = pstmt.executeQuery()) 
+          {
+            //Step 5: Handle results
+            String output = "";
+            System.out.println("Code, Room, RoomName, CheckIn, CheckOut, LastName, FirstName, Adults, Kids");
+            while (rs.next()) 
+            {
+              System.out.printf("%d, %s, %s, %s, %s, %s, %s, %d, %d\n", rs.getInt("reservations.Code"), 
+                                                                        rs.getString("reservations.Room"), 
+                                                                        rs.getString("rooms.RoomName"),
+                                                                        rs.getDate("reservations.checkIn").toString(), 
+                                                                        rs.getDate("reservations.checkOut").toString(), 
+                                                                        rs.getString("reservations.LastName"),
+                                                                        rs.getString("reservations.FirstName"), 
+                                                                        rs.getInt("reservations.Adults"),
+                                                                        rs.getInt("reservations.Kids"));
+            }
+            //Step 6: Commit or rollback transaction
+            conn.commit();
+          }
         }
-        catch (SQLException e) {
+        catch (SQLException e) 
+        {
           System.out.println(e);
           conn.rollback();
         }
@@ -106,37 +153,40 @@ public class InnReservations {
       }
    }
 
-   /*
-    * Prints all rows/columns from the specified table.
-    */
-   private static void example(String table) throws SQLException {
+   private void example() throws SQLException {
       try (Connection conn = DriverManager.getConnection(System.getenv("HP_JDBC_URL"),
                                                                  System.getenv("HP_JDBC_USER"),
                                                                  System.getenv("HP_JDBC_PW"))) {
-            // Step 2: Construct SQL statement
-            String sql = "SELECT * FROM " + table;
+         Scanner scanner = new Scanner(System.in);
+         System.out.print("Find pastries with price <=: ");
+         Double price = Double.valueOf(scanner.nextLine());
+         System.out.print("Filter by flavor (or 'Any'): ");
+         String flavor = scanner.nextLine();
 
-            conn.setAutoCommit(false);
+         List<Object> params = new ArrayList<Object>();
+         params.add(price);
+         StringBuilder sb = new StringBuilder("SELECT * FROM hp_goods WHERE price <= ?");
+         if (!"any".equalsIgnoreCase(flavor)) {
+             sb.append(" AND Flavor = ?");
+             params.add(flavor);
+         }
+         
+         try (PreparedStatement pstmt = conn.prepareStatement(sb.toString())) {
+             int i = 1;
+             for (Object p : params) {
+                 pstmt.setObject(i++, p);
+             }
 
-            // Step 4: Send SQL statement to DBMS
-            try (Statement stmt = conn.createStatement();
-               ResultSet rs = stmt.executeQuery(sql);) {
-
-               ResultSetMetaData rsmd = rs.getMetaData();
-               int columnsNumber = rsmd.getColumnCount();
-                // Step 5: Receive results
-               while (rs.next()) {
-                  for (int i = 1; i <= columnsNumber; i++) {
-                     if (i > 1) System.out.print(",\t");
-                        String columnValue = rs.getString(i);
-                     System.out.print(rsmd.getColumnName(i) + ": " + columnValue);
-                  }
-                  System.out.println("");
-               }
-               conn.commit();
-            } catch (SQLException e) {
-               conn.rollback();
-            }
+             try (ResultSet rs = pstmt.executeQuery()) {
+                 System.out.println("Matching Pastries:");
+                 int matchCount = 0;
+                 while (rs.next()) {
+                     System.out.format("%s %s ($%.2f) %n", rs.getString("Flavor"), rs.getString("Food"), rs.getDouble("price"));
+                     matchCount++;
+                 }
+                 System.out.format("----------------------%nFound %d match%s %n", matchCount, matchCount == 1 ? "" : "es");
+             }
+         }
       }
    }
 
@@ -144,19 +194,14 @@ public class InnReservations {
       InnReservations test = new InnReservations();
       test.setup();
       
-      try{
+      try
+      {
         test.fr5(arg);
       }
-      catch (SQLException ex){
+      catch (SQLException ex)
+      {
          System.err.println("SQLException for FR5");
          System.exit(-1);
       }
-
-      System.out.println("\nDone\n");
-      
-   public static void main(String[] arg) throws SQLException {
-      System.out.println("Hello, World!");
-      setup();
-      example(RESERVATIONS_TABLE);
    }
 }
