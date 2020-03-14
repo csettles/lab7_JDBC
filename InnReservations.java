@@ -65,65 +65,66 @@ public class InnReservations {
         //parse input
         List<Object> params = new ArrayList<Object>();
         Scanner scanner = new Scanner(System.in);
-        System.out.print("Number of filters: ");
-        int numFilters = Integer.valueOf(scanner.next());
-        System.out.println("Filter options: FirstName, LastName, Date, Room, Code\n");
+        String input = "";
 
-        for(int i = 0; i < numFilters; i++)
+        //First name
+        System.out.print("Enter FirstName: ");
+        input = scanner.nextLine();
+
+        if (!input.equals(""))
         {
-            System.out.printf("Filter %d by: ", i + 1);
-            String filterType = scanner.next();
-
-            if (filterType.equals("FirstName"))
-            {
-              System.out.print("Enter FirstName: ");
-              String input = scanner.next();
-              params.add(input);
-              query += buildQuery("FirstName", input);
-              System.out.println();
-            }
-            else if (filterType.equals("LastName"))
-            {
-
-              System.out.print("Enter LastName: ");
-              String input = scanner.next();
-              params.add(input);
-              query += buildQuery("LastName", input);
-              System.out.println();
-            }
-            else if (filterType.equals("Date")) 
-            {
-              query += "WHERE reservations.CheckIn >= ?";
-              System.out.print("Enter CheckIn (YYYY-MM-DD): ");
-              params.add(LocalDate.parse(scanner.next()));
-
-              query += "AND reservations.Checkout <= ?";
-              System.out.print("Enter CheckOut (YYYY-MM-DD): ");
-              params.add(LocalDate.parse(scanner.next()));
-              System.out.println(); 
-            }
-            else if (filterType.equals("Room")) 
-            {  
-              System.out.print("Enter Room: ");
-              String input = scanner.next();
-              params.add(input);
-              query += buildQuery("Room", input);
-              System.out.println(); 
-            }
-            else if (filterType.equals("Code")) 
-            {
-              System.out.print("Enter Code: ");
-              String input = scanner.next();
-              params.add(Integer.valueOf(input));
-              query += "WHERE reservations.Code = ?";
-              System.out.println();  
-            }
-            else 
-            {
-              System.out.println("Inavlid input. Options are FirstName, LastName, Date, Room, Code");
-              System.exit(-1);
-            }
+          params.add(input);
+          query += buildQuery("FirstName", input);
         }
+        
+        //Last name
+        System.out.print("Enter LastName: ");
+        input = scanner.nextLine();
+        if (!input.equals(""))
+        {
+          params.add(input);
+          query += buildQuery("LastName", input);
+        }
+
+        //CheckIn Date
+        System.out.print("Enter CheckIn (YYYY-MM-DD): ");
+        String checkIn = scanner.nextLine();
+        if (!checkIn.equals("")) 
+        {
+          query += "WHERE reservations.CheckIn >= ?";
+          params.add(LocalDate.parse(checkIn));
+        }
+
+        //CheckOut Date
+        System.out.print("Enter CheckOut (YYYY-MM-DD): ");
+        String checkOut = scanner.nextLine();
+        if (!checkOut.equals("")) 
+        {
+          query += "AND reservations.Checkout <= ?";
+          params.add(LocalDate.parse(checkOut));
+        }
+
+        //Room Code
+        System.out.print("Enter Room Code: ");
+        input = scanner.nextLine();
+        if (!input.equals("")) 
+        {  
+          params.add(input);
+          query += buildQuery("Room", input);
+        }
+
+        //Reservation Code
+        System.out.print("Enter Reservation Code: ");
+        input = scanner.nextLine();
+        if (!input.equals("")) 
+        {
+
+          params.add(Integer.valueOf(input));
+          query += "WHERE reservations.Code = ?";
+ 
+        }
+        System.out.println(); 
+
         //System.out.println(query);
 
         //Step 3: Start transaction
