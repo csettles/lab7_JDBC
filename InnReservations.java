@@ -31,16 +31,34 @@ public class InnReservations {
       }
    }
 
-   private String buildQuery(String attribute, String input)
+   private String buildQuery(String attribute, String input, int numFilters)
    {
       String query = "";
-      if (input.contains("%"))
+      
+      if (numFilters > 0)
       {
-        query += "WHERE reservations." + attribute + " LIKE ?";  
+        query += "AND ";
       }
       else
       {
-        query += "WHERE reservations." + attribute + " = ?";
+        query += "WHERE ";
+      }
+
+      if (attribute.equals("CheckIn"))
+      {
+        query += "reservations.CheckIn >= ?";
+      }
+      else if (attribute.equals("CheckOut"))
+      {
+        query += "reservations.Checkout <= ?";
+      }
+      else if (input.contains("%"))
+      {
+        query += "reservations." + attribute + " LIKE ?"; 
+      }
+      else
+      {
+        query += "reservations." + attribute + " = ?";
       }
 
       return query;
@@ -66,6 +84,7 @@ public class InnReservations {
         List<Object> params = new ArrayList<Object>();
         Scanner scanner = new Scanner(System.in);
         String input = "";
+        int numFilters = 0;
 
         //First name
         System.out.print("Enter FirstName: ");
@@ -74,7 +93,8 @@ public class InnReservations {
         if (!input.equals(""))
         {
           params.add(input);
-          query += buildQuery("FirstName", input);
+          query += buildQuery("FirstName", input, numFilters);
+          numFilters += 1;
         }
         
         //Last name
@@ -83,7 +103,8 @@ public class InnReservations {
         if (!input.equals(""))
         {
           params.add(input);
-          query += buildQuery("LastName", input);
+          query += buildQuery("LastName", input, numFilters);
+          numFilters += 1;
         }
 
         //CheckIn Date
@@ -91,8 +112,9 @@ public class InnReservations {
         String checkIn = scanner.nextLine();
         if (!checkIn.equals("")) 
         {
-          query += "WHERE reservations.CheckIn >= ?";
           params.add(LocalDate.parse(checkIn));
+          query += buildQuery("CheckIn", input, numFilters);
+          numFilters += 1;
         }
 
         //CheckOut Date
@@ -100,8 +122,9 @@ public class InnReservations {
         String checkOut = scanner.nextLine();
         if (!checkOut.equals("")) 
         {
-          query += "AND reservations.Checkout <= ?";
           params.add(LocalDate.parse(checkOut));
+          query += buildQuery("CheckOut", input, numFilters);
+          numFilters += 1;
         }
 
         //Room Code
@@ -110,7 +133,8 @@ public class InnReservations {
         if (!input.equals("")) 
         {  
           params.add(input);
-          query += buildQuery("Room", input);
+          query += buildQuery("Room", input, numFilters);
+          numFilters += 1;
         }
 
         //Reservation Code
@@ -118,10 +142,9 @@ public class InnReservations {
         input = scanner.nextLine();
         if (!input.equals("")) 
         {
-
           params.add(Integer.valueOf(input));
-          query += "WHERE reservations.Code = ?";
- 
+          query += buildQuery("Code", input, numFilters);
+          numFilters += 1;
         }
         System.out.println(); 
 
