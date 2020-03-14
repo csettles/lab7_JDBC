@@ -41,32 +41,33 @@ public class InnReservations {
       try (Connection conn = DriverManager.getConnection(System.getenv("HP_JDBC_URL"),
                                                                  System.getenv("HP_JDBC_USER"),
                                                                  System.getenv("HP_JDBC_PW"))) {
-         String deleteSql = "DELETE FROM " + RESERVATIONS_TABLE + "WHERE Code = ?";
-         String confirmSql = "SELECT FROM " + RESERVATIONS_TABLE + "WHERE Code = ?";
+         String deleteSql = "DELETE FROM " + RESERVATIONS_TABLE + " WHERE CODE = ?";
+         String confirmSql = "SELECT * FROM " + RESERVATIONS_TABLE + " WHERE CODE = ?";
 
          Scanner scanner = new Scanner(System.in);
-         System.out.println("Enter the reservation code you would like to cancel: ");
-         String code = scanner.nextLine();
+         System.out.print("Enter the reservation code you would like to cancel: ");
+         Integer code = Integer.valueOf(scanner.nextLine());
 
-         try (Statement stmt = conn.createStatement();
-               ResultSet rs = stmt.executeQuery(confirmSql);) {
+         try (PreparedStatement stmt = conn.prepareStatement(confirmSql)) {
+            stmt.setObject(1, code);
+            ResultSet rs = stmt.executeQuery();
             while (rs.next()) {
                System.out.format("\tDeleting reservation for %s %s...\n", rs.getString("Firstname"), rs.getString("Lastname"));
             }
          }
 
-         System.out.print("Are you sure? (y/n)");
-         String confirmation = scanner.nextLine().toLower();
-         if (confirmation != "y") {
-            System.out.prinln("Goodbye.");
+         System.out.print("Are you sure? (y/n) ");
+         String confirmation = scanner.nextLine().toLowerCase();
+         if (!confirmation.equals("y")) {
+            System.out.println("Goodbye.");
             return;
          }
 
          conn.setAutoCommit(false);
          try (PreparedStatement stmt = conn.prepareStatement(deleteSql)) {
-            stmt.setString(1, code);
+            stmt.setObject(1, code);
             int rowCount = stmt.executeUpdate();
-            System.out.format("Updated %d records for reservation %s\n", rowCount, code);
+            System.out.format("Updated %d records for reservation %d\n", rowCount, code.intValue());
             conn.commit();
          } catch (SQLException e) {
             conn.rollback();
@@ -111,6 +112,7 @@ public class InnReservations {
    public static void main(String[] arg) throws SQLException {
       System.out.println("Hello, World!");
       setup();
-      example(RESERVATIONS_TABLE);
+      InnReservations i = new InnReservations();
+      i.cancelReservation();
    }
 }
