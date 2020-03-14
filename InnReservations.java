@@ -31,6 +31,21 @@ public class InnReservations {
       }
    }
 
+   private String buildQuery(String attribute, String input)
+   {
+      String query = "";
+      if (input.contains("%"))
+      {
+        query += "WHERE reservations." + attribute + " LIKE ?";  
+      }
+      else
+      {
+        query += "WHERE reservations." + attribute + " = ?";
+      }
+
+      return query;
+   }
+
    private void fr5(String[] arg) throws SQLException 
    {
       //Step 1: Establish connection to RBDMS
@@ -61,16 +76,19 @@ public class InnReservations {
 
             if (filterType.equals("FirstName"))
             {
-              query += "WHERE reservations.FirstName = ?";
               System.out.print("Enter FirstName: ");
-              params.add(scanner.next());
+              String input = scanner.next();
+              params.add(input);
+              query += buildQuery("FirstName", input);
               System.out.println();
             }
             else if (filterType.equals("LastName"))
             {
-              query += "WHERE reservations.LastName = ?";
+
               System.out.print("Enter LastName: ");
-              params.add(scanner.next());
+              String input = scanner.next();
+              params.add(input);
+              query += buildQuery("LastName", input);
               System.out.println();
             }
             else if (filterType.equals("Date")) 
@@ -86,16 +104,18 @@ public class InnReservations {
             }
             else if (filterType.equals("Room")) 
             {  
-              query += "WHERE reservations.Room = ?";
               System.out.print("Enter Room: ");
-              params.add(scanner.next());
-              System.out.println();  
+              String input = scanner.next();
+              params.add(input);
+              query += buildQuery("Room", input);
+              System.out.println(); 
             }
             else if (filterType.equals("Code")) 
             {
-              query += "WHERE reservations.Code = ?";
               System.out.print("Enter Code: ");
-              params.add(Integer.valueOf(scanner.next()));
+              String input = scanner.next();
+              params.add(Integer.valueOf(input));
+              query += "WHERE reservations.Code = ?";
               System.out.println();  
             }
             else 
