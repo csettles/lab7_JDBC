@@ -13,6 +13,8 @@ import java.util.List;
 import java.util.ArrayList;
 import java.util.Arrays;
 
+import java.math.BigDecimal; 
+
 /*
 -- Shell init:
 export CLASSPATH=$CLASSPATH:mysql-connector-java-8.0.16.jar:.
@@ -31,6 +33,7 @@ public class InnReservations {
       }
    }
 
+   //Builds the WHERE clause for the query
    private String buildQuery(String attribute, String input, int numFilters)
    {
       String query = "";
@@ -71,14 +74,12 @@ public class InnReservations {
                                                          System.getenv("HP_JDBC_USER"),
                                                          System.getenv("HP_JDBC_PW"))) {
         
-
         //Step 2: Construct SQL statement;
         String query = "SELECT reservations.Code, reservations.Room, rooms.RoomName, ";
-        query += "reservations.CheckIn, reservations.CheckOut, reservations.LastName, ";
+        query += "reservations.CheckIn, reservations.CheckOut, reservations.Rate, reservations.LastName, ";
         query += "reservations.FirstName, reservations.Adults, reservations.Kids ";
         query += "FROM shbae.lab7_reservations as reservations ";
         query += "JOIN shbae.lab7_rooms as rooms ON reservations.Room = rooms.RoomCode ";
-
 
         //parse input
         List<Object> params = new ArrayList<Object>();
@@ -148,15 +149,11 @@ public class InnReservations {
         }
         System.out.println(); 
 
-        //System.out.println(query);
-
         //Step 3: Start transaction
         conn.setAutoCommit(false);
 
-
         try (PreparedStatement pstmt = conn.prepareStatement(query)) 
         {
-
           //Step 4: Send SQL statement to DBMS
           int k = 1;
           for (Object p: params)
@@ -168,14 +165,15 @@ public class InnReservations {
           {
             //Step 5: Handle results
             String output = "";
-            System.out.println("Code, Room, RoomName, CheckIn, CheckOut, LastName, FirstName, Adults, Kids");
+            System.out.println("Code, Room, RoomName, CheckIn, CheckOut, Rate, LastName, FirstName, Adults, Kids");
             while (rs.next()) 
             {
-              System.out.printf("%d, %s, %s, %s, %s, %s, %s, %d, %d\n", rs.getInt("reservations.Code"), 
+              System.out.printf("%d, %s, %s, %s, %s, %.2f, %s, %s, %d, %d\n", rs.getInt("reservations.Code"), 
                                                                         rs.getString("reservations.Room"), 
                                                                         rs.getString("rooms.RoomName"),
                                                                         rs.getDate("reservations.checkIn").toString(), 
                                                                         rs.getDate("reservations.checkOut").toString(), 
+                                                                        rs.getDouble("reservations.Rate"),
                                                                         rs.getString("reservations.LastName"),
                                                                         rs.getString("reservations.FirstName"), 
                                                                         rs.getInt("reservations.Adults"),
@@ -192,8 +190,6 @@ public class InnReservations {
         }
 
         //Step 7: Close connection (handled implcitly by try-with-resources syntax)
-        
-        //System.out.println(Arrays.toString(filters.toArray()));
       }
    }
 
