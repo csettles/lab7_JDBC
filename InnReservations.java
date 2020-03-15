@@ -112,10 +112,22 @@ public class InnReservations {
         if (!checkIn.equals("") && !checkIn.equals("")) 
         {
           params.add(LocalDate.parse(checkIn));
+          params.add(LocalDate.parse(checkIn));
+          params.add(LocalDate.parse(checkOut));
           params.add(LocalDate.parse(checkOut));
 
+          if (numFilters > 0)
+          {
+            query += "AND NOT((reservations.CheckIn < ? and reservations.CheckOut <= ?) ";
+            query += "OR (reservations.CheckIn >= ? and reservations.CheckOut > ?) OR (reservations.CheckIn = reservations.CheckOut))";
+          }
+          else
+          {
+            query += "WHERE NOT((reservations.CheckIn < ? and reservations.CheckOut <= ?) ";
+            query += "OR (reservations.CheckIn >= ? and reservations.CheckOut > ?) OR (reservations.CheckIn = reservations.CheckOut))";
+          }
+
           numFilters += 2;
-          System.out.println(query);
         }
 
         //Room Code
