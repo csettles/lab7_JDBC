@@ -34,6 +34,55 @@ public class InnReservations {
       }
    }
 
+/*displays a table of all rooms information: popularity, next available checkin, last known checkout, length of that stay*/
+   private void roomsAndRates() throws SQLException {
+      try (Connection conn = DriverManager.getConnection(System.getenv("HP_JDBC_URL"),
+                                                                 System.getenv("HP_JDBC_USER"),
+                                                                 System.getenv("HP_JDBC_PW"))) {
+
+         StringBuilder sb = new StringBuilder("with partA as " +
+                            "(select room, roomname, round(sum(checkout-checkin)/180,2) popularity "+
+                            "from lab7_rooms rooms join lab7_reservations reservations on roomcode=room " +
+                            "where checkout > date_sub(curdate(), interval 180 day) " +
+                            "group by room "+
+                            "order by popularity desc), " +
+
+                            "partB as " +
+                            "(select r1.room room, min(r1.checkout) nextAvailCheckin " +
+                            "from lab7_reservations r1 join lab7_reservations r2 " +
+                            "on r1.room=r2.room and r1.code<>r2.code " +
+                            "where r1.checkout > curdate() and r2.checkout > curdate() " +
+                            "and r1.checkout < r2.checkin " +
+                            "group by r1.room), " +
+
+                            "partC as " +
+                            "(with mostRecents as (select room, max(checkout) co " +
+                            "from lab7_rooms rooms join lab7_reservations reservations on roomcode=room " +
+                            "group by room) " +
+
+                            "select mostRecents.room, datediff(checkout,checkin) lengthStay, co mostRecentCheckout " +
+                            "from lab7_reservations reservations join mostRecents " +
+                            "on reservations.room=mostRecents.room and co=checkout " +
+                            "order by datediff(checkout, checkin) desc " +
+                            ") " +
+
+                            "select partA.room, roomname, popularity, nextAvailCheckin, lengthStay, mostRecentCheckout " +
+                            "from partC join partA on partC.room=partA.room " +
+                            "join partB on partB.room=partC.room " +
+                            ";");
+
+         try (PreparedStatement pstmt = conn.prepareStatement(sb.toString())) {
+
+             try (ResultSet rs = pstmt.executeQuery()) {
+                 System.out.println("Room Info:");
+                 while (rs.next()) {
+                     System.out.format("%s %s ($%.2f) %s %s %d %n", rs.getString("room"), rs.getString("roomname"), rs.getDouble("popularity"), rs.getDate("nextAvailCheckin").toString(), rs.getDate("mostRecentCheckout").toString(), rs.getInt("lengthStay"));
+                 }
+             }
+         }
+      }
+   }
+
    /*
     * Prompts the user for a reservation code and deletes the row.
     */
@@ -114,5 +163,6 @@ public class InnReservations {
       setup();
       InnReservations i = new InnReservations();
       i.cancelReservation();
+      i.roomsAndRates();
    }
 }
