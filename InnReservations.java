@@ -24,14 +24,14 @@ public class InnReservations {
    private static void setup() {
       try {
          Class.forName("com.mysql.cj.jdbc.Driver");
-         System.out.println("MySQL JDBC Driver loaded");
+         //System.out.println("MySQL JDBC Driver loaded");
       } catch (ClassNotFoundException ex) {
          System.err.println("Unable to load JDBC Driver");
          System.exit(-1);
       }
    }
 
-   private void example() throws SQLException {
+   private void getRevenue() throws SQLException {
       try (Connection conn = DriverManager.getConnection(System.getenv("HP_JDBC_URL"),
                                                                  System.getenv("HP_JDBC_USER"),
                                                                  System.getenv("HP_JDBC_PW"))) {
@@ -195,7 +195,7 @@ public class InnReservations {
 
       try {
          InnReservations IR = new InnReservations();
-         IR.example();
+         IR.getRevenue();
       } catch (SQLException e) {
           System.err.println("SQLException: " + e.getMessage());
       }
