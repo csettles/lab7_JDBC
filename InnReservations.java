@@ -113,18 +113,19 @@ public class InnReservations {
         {
           params.add(LocalDate.parse(checkIn));
           params.add(LocalDate.parse(checkIn));
+
           params.add(LocalDate.parse(checkOut));
           params.add(LocalDate.parse(checkOut));
 
           if (numFilters > 0)
           {
             query += "AND NOT((reservations.CheckIn < ? and reservations.CheckOut <= ?) ";
-            query += "OR (reservations.CheckIn >= ? and reservations.CheckOut > ?) OR (reservations.CheckIn = reservations.CheckOut))";
+            query += "OR (reservations.CheckIn >= ? and reservations.CheckOut > ?))";
           }
           else
           {
             query += "WHERE NOT((reservations.CheckIn < ? and reservations.CheckOut <= ?) ";
-            query += "OR (reservations.CheckIn >= ? and reservations.CheckOut > ?) OR (reservations.CheckIn = reservations.CheckOut))";
+            query += "OR (reservations.CheckIn >= ? and reservations.CheckOut > ?))";
           }
 
           numFilters += 2;
