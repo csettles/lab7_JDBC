@@ -21,16 +21,28 @@ export HP_JDBC_USER=
 export HP_JDBC_PW=
  */
 public class InnReservations {
+
    private static final String RESERVATIONS_TABLE = "shbae.lab7_reservations";
    private static final String ROOMS_TABLE = "shbae.lab7_rooms";
+   private Connection conn; 
 
-   private static void setup() {
+
+   public InnReservations throws SQLException(){
       try {
          Class.forName("com.mysql.cj.jdbc.Driver");
          System.out.println("MySQL JDBC Driver loaded");
       } catch (ClassNotFoundException ex) {
          System.err.println("Unable to load JDBC Driver");
          System.exit(-1);
+      }
+
+      try{ 
+         conn = DriverManager.getConnection(System.getenv("HP_JDBC_URL"),
+                                            System.getenv("HP_JDBC_USER"),
+                                            System.getenv("HP_JDBC_PW")) 
+      } catch (SQLException e) {
+         System.err.println("Unable to connect to database");
+         System.exit(-1); 
       }
    }
 
@@ -158,6 +170,7 @@ public class InnReservations {
       }
    }
 
+<<<<<<< Updated upstream
    public static void main(String[] arg) throws SQLException {
       System.out.println("Hello, World!");
       setup();
@@ -166,3 +179,48 @@ public class InnReservations {
       i.roomsAndRates();
    }
 }
+<<<<<<< Updated upstream
+=======
+=======
+   public static void main(String[] arg) {
+      InnReservations i = new InnReservations(); 
+      i.setup(); 
+
+      Scannner sc = new Scanner(System.in);
+      System.out.println("Welcome to the reservation system");
+      System.out.println("Please enter a command: ");
+
+      String input = scanner.nextLine(); 
+
+      while(!input.equals("exit"){
+         
+      switch(input){
+      case "Rooom Rates" : 
+         fr1();
+         break
+      case "Reservations":
+         fr2();
+         break;
+      case "Change Reservation":
+         fr3();
+         break;  
+      case "Cancel Reservation": 
+         fr4(); 
+         break; 
+      case "Reservation Details":
+         fr5(); 
+         break; 
+      case "Revenue":
+         fr6(); 
+         break; 
+      default :
+         System.out.println("Not a valid command"); 
+         break;  
+      }      
+      
+      System.out.prinlnt("Please enter a command:"); 
+      input = scanner.nextLine();
+   }}
+}
+>>>>>>> Stashed changes
+>>>>>>> Stashed changes
