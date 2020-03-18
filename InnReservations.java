@@ -12,11 +12,16 @@ import java.util.LinkedHashMap;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.ArrayList;
+import java.util.Random; 
+import java.text.SimpleDateFormat; 
+import java.text.ParseException;
+import java.util.Date; 
+import java.util.Calendar; 
 
 /*
 -- Shell init:
 export CLASSPATH=$CLASSPATH:mysql-connector-java-8.0.16.jar:.
-export HP_JDBC_URL=jdbc:mysql://db.labthreesixfive.com/your_username_here?autoReconnect=true\&useSSL=false
+export HP_JDBC_URL=jdbc:mysql://db.labthreesixfive.com/your_username_here?; autoReconnect=true\&useSSL=false
 export HP_JDBC_USER=
 export HP_JDBC_PW=
  */
@@ -124,6 +129,186 @@ public class InnReservations {
       }
    }
 
+
+   class ResevResult {
+      public String roomCode; 
+      public String roomName;
+      public String bedType; 
+      public ResevResult(String roomCode, String roomName, String bedType){
+         this.roomCode = roomCode;
+         this.roomName = roomName;
+         this.bedType = bedType;
+         }
+     } 
+
+   public void makeReservation() throws SQLException {
+
+      try (Connection conn = DriverManager.getConnection(System.getenv("HP_JDBC_URL"),
+                                                                 System.getenv("HP_JDBC_USER"),
+                                                                 System.getenv("HP_JDBC_PW"))) {
+         conn.setAutoCommit(false); 
+         Scanner scanner = new Scanner(System.in); 
+         System.out.println("First name :");
+         String firstName = scanner.nextLine();  
+         System.out.println("Last name :");
+         String lastName = scanner.nextLine();  
+         System.out.println("Room Code ('Any' to indicate no preference):");
+         String roomCode = scanner.nextLine();  
+         System.out.println("Desired bed type ('Any' to indicate no preference):");
+         String bedType = scanner.nextLine();
+         //SimpleDateFormat sdFormat = new SimpleDateFormat("MM/dd/yy");    
+         //add date format validation?
+         System.out.println("Begin date of stay YYYY-MM-DD:");
+         String startDate = scanner.nextLine();  
+         System.out.println("End date of stay YYYY-MM-DD:");
+         String endDate = scanner.nextLine();  
+         System.out.println("Number of children:");
+         int numChildren = scanner.nextInt();  
+         System.out.println("Number of adults:");
+         int numAdults = scanner.nextInt(); 
+
+         //TODO: check if there are any rooms big with enough occupancy
+         String checkOcc = "SELECT macOcc FROM " + ROOMS_TABLE; 
+         try(PreparedStatement s = conn.prepareStatement(checkOcc)) {
+         } catch(SQLException e){
+         }        
+
+         String queryString = "SELECT * FROM " + ROOMS_TABLE + " WHERE RoomCode NOT IN " +
+            "( SELECT RoomCode FROM " + RESERVATIONS_TABLE + " JOIN " + ROOMS_TABLE + " ON Room = RoomCode " +
+            "WHERE (CheckIn >= '" + startDate + "' and CheckIn <= '" + endDate + "' ) " + 
+            "or (CheckOut >= '" + startDate + "' and CheckOut <= '" + endDate + "' )) AND maxOcc >= " + (numAdults+numChildren); 
+         if(!roomCode.toLowerCase().equals("any")){
+            queryString += " AND RoomCode = '" + roomCode.toUpperCase() + "' "; 
+         }
+         if(!bedType.toLowerCase().equals("any")){
+            queryString += " AND bedType = '" + bedType.substring(0, 1).toUpperCase() + bedType.substring(1).toLowerCase() + "' " ; 
+         }
+
+         /*String queryString = "select * from shbae.lab7_rooms where RoomCode NOT IN ( select RoomCode from shbae.lab7_reservations join shbae.lab7_rooms on Room = RoomCode " + 
+         " where (CheckIn >= '2010-01-01'and CheckIn <='2010-01-08') or (CheckOut >= '2010-01-01' and CheckOut <= '2010-01-08'))"; 
+*/ 
+         ArrayList<ResevResult> results = new ArrayList<>(); 
+
+         try (PreparedStatement stmt = conn.prepareStatement(queryString)) {
+            //stmt.setObject(1, code);
+            ResultSet rs = stmt.executeQuery();
+            rs.setFetchSize(10); 
+            int ctr = 1; 
+            while (rs.next()) {
+               System.out.format(ctr + ") %s", rs.getString("RoomName"));
+               System.out.println(); 
+               ResevResult thisR = new ResevResult(rs.getString("RoomCode"), rs.getString("RoomName"), rs.getString("bedType")); 
+               results.add(thisR); 
+               ctr++; 
+            }
+            if(results.isEmpty()){
+               System.out.println("no results!!");
+               results = makeReccomendation(roomCode,startDate,endDate, conn);  
+            } 
+         } catch(SQLException e) {
+            System.out.println(e); 
+            System.out.println("Rollback here !" ); 
+            conn.rollback();
+            System.out.println("Error making reservation"); 
+            return; 
+         } 
+         System.out.println("Select an option : "); 
+         int selection = scanner.nextInt(); 
+         //read the remaining newline
+         scanner.nextLine(); 
+         ResevResult thisResult = results.get(selection-1);
+         double rate = 150.00; 
+         // double roomRate = calcWeekendRate(startDate, endDate); 
+         // add resev dates and fix formatting
+         System.out.format("%s %s %s %s %s Adults:%d Children:%d", firstName, lastName, thisResult.roomCode, thisResult.roomName, thisResult.bedType, numAdults, numChildren); 
+         System.out.println(); 
+         System.out.println("Enter CONFIRM or CANCEL:" );
+         String option = scanner.nextLine(); 
+         
+         Random rand = new Random(); 
+         int resvCode = rand.nextInt(100000);
+         queryString = "INSERT INTO " + RESERVATIONS_TABLE + " (CODE,Room,CheckIn,Checkout,Rate,LastName,FirstName,Adults,Kids) " + 
+            "VALUES( " + resvCode + ", '" + thisResult.roomCode + "', '" + startDate + "', '" + endDate + "', " + rate + ", '" + lastName + "', '" + firstName + "', " + numAdults +
+            ", " + numChildren + ") ;"; 
+         if(option.equals("CONFIRM")) {
+            try(PreparedStatement stmt = conn.prepareStatement(queryString)){
+            System.out.println("sucessfully added?"); 
+            // add reservation to table
+            }catch(SQLException e){
+               conn.rollback();
+               System.out.println("Error making reservation"); 
+               return; 
+            }
+         } else {
+            System.out.println("Cancelling reservation"); 
+         }
+      }
+      return; 
+   } 
+   
+   /* 
+    * TODO: Helper function for makeReservation that recommends similar reservations based on date
+    */ 
+   public ArrayList<ResevResult> makeReccomendation(String roomCode, String startDate, String endDate, Connection conn) {
+      System.out.println("hellloooo??"); 
+      ArrayList<ResevResult> results = new ArrayList<>(); 
+      SimpleDateFormat sdf = new SimpleDateFormat("YYYY-MM-DD"); 
+      try { 
+         Date startObj = sdf.parse(startDate); 
+         Date tempStart = startObj; 
+         Date endObj = sdf.parse(endDate); 
+         Date tempEnd = endObj; 
+         //shift the reservation by one day fowards and add each time it is available 
+         while(results.size() < 3) {
+            System.out.println(sdf.format(tempStart)); 
+            tempStart = incrementDate(tempStart,1); 
+            tempEnd = incrementDate(tempEnd,1);
+            System.out.println(sdf.format(tempStart)); 
+            //queryRoomForDate(roomCode,tempStart,tempEnd);
+         } 
+         while(results.size() < 6) { 
+
+         }
+      } catch (ParseException e){
+         System.out.println(e); 
+         System.out.println("Unable to make reccomendation"); 
+         return results; 
+      }
+      return results; 
+   } 
+
+//This is the only method of date incrementing i've found, but it doesn't wrap around the months, it just keeps incrementing days. 
+//TODO: 
+   public Date incrementDate(Date thisDate, int delta) {
+      //SimpleDateFormat sdf = new SimpleDateFormat("YYYY-MM-DD"); 
+      Calendar cal = Calendar.getInstance(); 
+      cal.setTime(thisDate);
+      cal.add(Calendar.DAY_OF_MONTH, delta);
+      //Date temp = sdf.format(cal.getTime()); 
+      return cal.getTime(); 
+   }
+
+
+   /*   
+    * Helper function for makeReccomendation that returns query
+    */ 
+   public String queryRoomForDate(String roomCode, String startDate, String endDate) {
+
+      String queryString = "SELECT * FROM " + ROOMS_TABLE + " WHERE RoomCode NOT IN " +
+            "( SELECT RoomCode FROM " + RESERVATIONS_TABLE + " JOIN " + ROOMS_TABLE + " ON Room = RoomCode " +
+            "WHERE (CheckIn >= '" + startDate + "' and CheckIn <= '" + endDate + "' ) " +
+            "or (CheckOut >= '" + startDate + "' and CheckOut <= '" + endDate + "' ))";
+      return "";
+   }     
+
+ /*
+ * TODO: Calculate weekend rate based on number of weekend days and week days 
+ */ 
+public double calcWeekendRate(String startDate, String endDate) {
+
+}  
+
+
    /*
     * Prints all rows/columns from the specified table.
     */
@@ -162,7 +347,13 @@ public class InnReservations {
       System.out.println("Hello, World!");
       setup();
       InnReservations i = new InnReservations();
-      i.cancelReservation();
-      i.roomsAndRates();
+      //i.cancelReservation();
+      //i.roomsAndRates();
+      //i.makeReservation();      
+      try (Connection conn = DriverManager.getConnection(System.getenv("HP_JDBC_URL"),
+                                                                 System.getenv("HP_JDBC_USER"),
+                                                                 System.getenv("HP_JDBC_PW"))) {
+         i.makeReccomendation("AOB", "2010-01-01", "2010-01-08", conn);
+      }
    }
 }
