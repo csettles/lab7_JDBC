@@ -2,9 +2,9 @@ import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.Statement;
 import java.sql.Connection;
-import java.sql.SQLException;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
+import java.sql.SQLException; 
 
 import java.util.Map;
 import java.util.Scanner;
@@ -17,6 +17,8 @@ import java.text.SimpleDateFormat;
 import java.text.ParseException;
 import java.util.Date; 
 import java.util.Calendar; 
+
+import java.time.ZoneId; 
 
 /*
 -- Shell init:
@@ -134,11 +136,18 @@ public class InnReservations {
       public String roomCode; 
       public String roomName;
       public String bedType; 
-      public ResevResult(String roomCode, String roomName, String bedType){
+      public String startDate; 
+      public String endDate; 
+      public ResevResult(String roomCode, String roomName, String bedType, String startDate, String endDate){
          this.roomCode = roomCode;
          this.roomName = roomName;
          this.bedType = bedType;
+         this.startDate = startDate;
+         this.endDate = endDate; 
          }
+      public String toString(){
+         return roomCode + " " + roomName + " " + bedType + " " + startDate + " " + endDate; 
+      }
      } 
 
    public void makeReservation() throws SQLException {
@@ -156,8 +165,6 @@ public class InnReservations {
          String roomCode = scanner.nextLine();  
          System.out.println("Desired bed type ('Any' to indicate no preference):");
          String bedType = scanner.nextLine();
-         //SimpleDateFormat sdFormat = new SimpleDateFormat("MM/dd/yy");    
-         //add date format validation?
          System.out.println("Begin date of stay YYYY-MM-DD:");
          String startDate = scanner.nextLine();  
          System.out.println("End date of stay YYYY-MM-DD:");
@@ -184,9 +191,6 @@ public class InnReservations {
             queryString += " AND bedType = '" + bedType.substring(0, 1).toUpperCase() + bedType.substring(1).toLowerCase() + "' " ; 
          }
 
-         /*String queryString = "select * from shbae.lab7_rooms where RoomCode NOT IN ( select RoomCode from shbae.lab7_reservations join shbae.lab7_rooms on Room = RoomCode " + 
-         " where (CheckIn >= '2010-01-01'and CheckIn <='2010-01-08') or (CheckOut >= '2010-01-01' and CheckOut <= '2010-01-08'))"; 
-*/ 
          ArrayList<ResevResult> results = new ArrayList<>(); 
 
          try (PreparedStatement stmt = conn.prepareStatement(queryString)) {
@@ -197,13 +201,18 @@ public class InnReservations {
             while (rs.next()) {
                System.out.format(ctr + ") %s", rs.getString("RoomName"));
                System.out.println(); 
-               ResevResult thisR = new ResevResult(rs.getString("RoomCode"), rs.getString("RoomName"), rs.getString("bedType")); 
+               ResevResult thisR = new ResevResult(rs.getString("RoomCode"), rs.getString("RoomName"), rs.getString("bedType"), startDate, endDate); 
                results.add(thisR); 
                ctr++; 
             }
             if(results.isEmpty()){
-               System.out.println("no results!!");
+               System.out.println("No results for that request. Here is the same room with similar dates.");
                results = makeReccomendation(roomCode,startDate,endDate, conn);  
+               ctr = 1;  
+               for(ResevResult r : results) {
+                  System.out.println(ctr + ") " + r.roomCode + " start date : " + r.startDate + " end date : " + r.endDate); 
+                  ctr++; 
+               }
             } 
          } catch(SQLException e) {
             System.out.println(e); 
@@ -232,9 +241,10 @@ public class InnReservations {
             ", " + numChildren + ") ;"; 
          if(option.equals("CONFIRM")) {
             try(PreparedStatement stmt = conn.prepareStatement(queryString)){
-            System.out.println("sucessfully added?"); 
-            // add reservation to table
+            stmt.executeUpdate();
+            conn.commit(); 
             }catch(SQLException e){
+               System.out.println(e); 
                conn.rollback();
                System.out.println("Error making reservation"); 
                return; 
@@ -250,24 +260,28 @@ public class InnReservations {
     * TODO: Helper function for makeReservation that recommends similar reservations based on date
     */ 
    public ArrayList<ResevResult> makeReccomendation(String roomCode, String startDate, String endDate, Connection conn) {
-      System.out.println("hellloooo??"); 
       ArrayList<ResevResult> results = new ArrayList<>(); 
-      SimpleDateFormat sdf = new SimpleDateFormat("YYYY-MM-DD"); 
+      SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd"); 
       try { 
          Date startObj = sdf.parse(startDate); 
+         System.out.println(startObj); 
          Date tempStart = startObj; 
          Date endObj = sdf.parse(endDate); 
-         Date tempEnd = endObj; 
+         Date tempEnd = endObj;
+         int ctr = 0;  
          //shift the reservation by one day fowards and add each time it is available 
-         while(results.size() < 3) {
-            System.out.println(sdf.format(tempStart)); 
-            tempStart = incrementDate(tempStart,1); 
-            tempEnd = incrementDate(tempEnd,1);
-            System.out.println(sdf.format(tempStart)); 
-            //queryRoomForDate(roomCode,tempStart,tempEnd);
-         } 
+         while(results.size() < 3) { 
+            tempStart = incrementDate(tempStart,1,sdf); 
+            tempEnd = incrementDate(tempEnd,1,sdf);
+            queryRoomForDate(roomCode,sdf.format(tempStart),sdf.format(tempEnd),conn,results);
+         }
+         //reset to original dates 
+         tempStart = startObj;
+         tempEnd = endObj;
          while(results.size() < 6) { 
-
+            tempStart = incrementDate(tempStart,-1,sdf); 
+            tempEnd = incrementDate(tempEnd,-1,sdf);
+            queryRoomForDate(roomCode,sdf.format(tempStart),sdf.format(tempEnd),conn,results);
          }
       } catch (ParseException e){
          System.out.println(e); 
@@ -277,36 +291,47 @@ public class InnReservations {
       return results; 
    } 
 
-//This is the only method of date incrementing i've found, but it doesn't wrap around the months, it just keeps incrementing days. 
-//TODO: 
-   public Date incrementDate(Date thisDate, int delta) {
-      //SimpleDateFormat sdf = new SimpleDateFormat("YYYY-MM-DD"); 
-      Calendar cal = Calendar.getInstance(); 
-      cal.setTime(thisDate);
-      cal.add(Calendar.DAY_OF_MONTH, delta);
-      //Date temp = sdf.format(cal.getTime()); 
-      return cal.getTime(); 
+   //This is the only method of date incrementing i've found, but it doesn't wrap around the months, it just keeps incrementing days. 
+   //TODO: 
+   public Date incrementDate(Date thisDate, int delta, SimpleDateFormat sdf) {
+      LocalDate ld = LocalDate.parse(sdf.format(thisDate)).plusDays(delta); 
+      Date date = Date.from(ld.atStartOfDay(ZoneId.systemDefault()).toInstant());   
+      return date;
    }
 
 
    /*   
     * Helper function for makeReccomendation that returns query
     */ 
-   public String queryRoomForDate(String roomCode, String startDate, String endDate) {
+   public void queryRoomForDate(String roomCode, String startDate, String endDate, Connection conn, ArrayList<ResevResult> results) {
 
       String queryString = "SELECT * FROM " + ROOMS_TABLE + " WHERE RoomCode NOT IN " +
             "( SELECT RoomCode FROM " + RESERVATIONS_TABLE + " JOIN " + ROOMS_TABLE + " ON Room = RoomCode " +
             "WHERE (CheckIn >= '" + startDate + "' and CheckIn <= '" + endDate + "' ) " +
-            "or (CheckOut >= '" + startDate + "' and CheckOut <= '" + endDate + "' ))";
-      return "";
+            "or (CheckOut >= '" + startDate + "' and CheckOut <= '" + endDate + "'))" + 
+            "AND RoomCode = '" + roomCode + "'";
+      
+      try(PreparedStatement stmt = conn.prepareStatement(queryString)){
+         //System.out.println("sucessfully added?"); 
+         ResultSet rs = stmt.executeQuery();
+         //should only ever be one result
+         while(rs.next()){
+            results.add(new ResevResult(rs.getString("RoomCode"), rs.getString("RoomName"), rs.getString("bedType"), startDate, endDate)); 
+         }
+      }catch(SQLException e){
+         System.out.println("Error searching for new room date");       
+         System.out.println(e); 
+         return; 
+      }
+      return; 
    }     
 
- /*
- * TODO: Calculate weekend rate based on number of weekend days and week days 
- */ 
-public double calcWeekendRate(String startDate, String endDate) {
-
-}  
+      /*
+      * TODO: Calculate weekend rate based on number of weekend days and week days 
+      */ 
+      public double calcWeekendRate(String startDate, String endDate) {
+         return 0.0; 
+      }  
 
 
    /*
@@ -349,11 +374,16 @@ public double calcWeekendRate(String startDate, String endDate) {
       InnReservations i = new InnReservations();
       //i.cancelReservation();
       //i.roomsAndRates();
-      //i.makeReservation();      
-      try (Connection conn = DriverManager.getConnection(System.getenv("HP_JDBC_URL"),
+      i.makeReservation();      
+      /*try (Connection conn = DriverManager.getConnection(System.getenv("HP_JDBC_URL"),
                                                                  System.getenv("HP_JDBC_USER"),
                                                                  System.getenv("HP_JDBC_PW"))) {
-         i.makeReccomendation("AOB", "2010-01-01", "2010-01-08", conn);
-      }
+         ArrayList<ResevResult> results = new ArrayList<ResevResult>(); 
+         i.makeReccomendation("CAS", "2010-01-01", "2010-01-08", conn);
+         //i.queryRoomForDate("CAS", "2010-01-01", "2010-01-08", conn, results);
+         for(ResevResult r : results){
+            System.out.println(results.toString()); 
+         }         
+      }*/
    }
 }
