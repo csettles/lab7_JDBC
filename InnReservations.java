@@ -27,7 +27,7 @@ public class InnReservations {
    private Connection conn; 
 
 
-   public InnReservations throws SQLException(){
+   public InnReservations() throws SQLException {
       try {
          Class.forName("com.mysql.cj.jdbc.Driver");
          System.out.println("MySQL JDBC Driver loaded");
@@ -39,7 +39,7 @@ public class InnReservations {
       try{ 
          conn = DriverManager.getConnection(System.getenv("HP_JDBC_URL"),
                                             System.getenv("HP_JDBC_USER"),
-                                            System.getenv("HP_JDBC_PW")) 
+                                            System.getenv("HP_JDBC_PW"));
       } catch (SQLException e) {
          System.err.println("Unable to connect to database");
          System.exit(-1); 
@@ -170,57 +170,49 @@ public class InnReservations {
       }
    }
 
-<<<<<<< Updated upstream
    public static void main(String[] arg) throws SQLException {
-      System.out.println("Hello, World!");
-      setup();
       InnReservations i = new InnReservations();
-      i.cancelReservation();
-      i.roomsAndRates();
-   }
-}
-<<<<<<< Updated upstream
-=======
-=======
-   public static void main(String[] arg) {
-      InnReservations i = new InnReservations(); 
-      i.setup(); 
-
-      Scannner sc = new Scanner(System.in);
+      
+      Scanner scanner = new Scanner(System.in);
       System.out.println("Welcome to the reservation system");
+      System.out.println("\t1. List popular rooms");
+      System.out.println("\t2. Make a reservation");
+      System.out.println("\t3. Alter a reservation");
+      System.out.println("\t4. Cancel a reservation");
+      System.out.println("\t5. View reservation details");
+      System.out.println("\t6. List monthly revenue");
       System.out.println("Please enter a command: ");
 
       String input = scanner.nextLine(); 
 
-      while(!input.equals("exit"){
+      while(!input.equals("exit")) {
          
-      switch(input){
-      case "Rooom Rates" : 
-         fr1();
-         break
-      case "Reservations":
-         fr2();
-         break;
-      case "Change Reservation":
-         fr3();
-         break;  
-      case "Cancel Reservation": 
-         fr4(); 
-         break; 
-      case "Reservation Details":
-         fr5(); 
-         break; 
-      case "Revenue":
-         fr6(); 
-         break; 
-      default :
-         System.out.println("Not a valid command"); 
-         break;  
-      }      
+        switch(input){
+          case "1" : 
+             i.roomsAndRates();
+             break;
+          case "2":
+             //fr2();
+             break;
+          case "3":
+             //fr3();
+             break;  
+          case "4": 
+             i.cancelReservation();
+             break; 
+          case "5":
+             //fr5(); 
+             break; 
+          case "6":
+             //fr6(); 
+             break; 
+          default:
+             System.out.println("Sorry, that's not a valid command\n"); 
+             break;  
+        }      
       
-      System.out.prinlnt("Please enter a command:"); 
+      System.out.println("Please enter a command:"); 
       input = scanner.nextLine();
-   }}
+   }
+ }
 }
->>>>>>> Stashed changes
->>>>>>> Stashed changes
