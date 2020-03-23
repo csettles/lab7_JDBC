@@ -588,23 +588,22 @@ public class InnReservations {
       public String bedType; 
       public String startDate; 
       public String endDate; 
-      public ResevResult(String roomCode, String roomName, String bedType, String startDate, String endDate){
+      public Double basePrice; 
+      public ResevResult(String roomCode, String roomName, String bedType, String startDate, String endDate, Double basePrice){
          this.roomCode = roomCode;
          this.roomName = roomName;
          this.bedType = bedType;
          this.startDate = startDate;
          this.endDate = endDate; 
+         this.basePrice = basePrice; 
          }
       public String toString(){
-         return roomCode + " " + roomName + " " + bedType + " " + startDate + " " + endDate; 
+         return roomCode + " " + roomName + " " + bedType + " " + startDate + " " + endDate + " " + basePrice; 
       }
      } 
 
    public void makeReservation() throws SQLException {
 
-      try (Connection conn = DriverManager.getConnection(System.getenv("HP_JDBC_URL"),
-                                                                 System.getenv("HP_JDBC_USER"),
-                                                                 System.getenv("HP_JDBC_PW"))) {
          conn.setAutoCommit(false); 
          Scanner scanner = new Scanner(System.in); 
          System.out.println("First name :");
@@ -624,11 +623,6 @@ public class InnReservations {
          System.out.println("Number of adults:");
          int numAdults = scanner.nextInt(); 
 
-         //TODO: check if there are any rooms big with enough occupancy
-         String checkOcc = "SELECT macOcc FROM " + ROOMS_TABLE; 
-         try(PreparedStatement s = conn.prepareStatement(checkOcc)) {
-         } catch(SQLException e){
-         }        
 
          String queryString = "SELECT * FROM " + ROOMS_TABLE + " WHERE RoomCode NOT IN " +
             "( SELECT RoomCode FROM " + RESERVATIONS_TABLE + " JOIN " + ROOMS_TABLE + " ON Room = RoomCode " +
@@ -651,7 +645,7 @@ public class InnReservations {
             while (rs.next()) {
                System.out.format(ctr + ") %s", rs.getString("RoomName"));
                System.out.println(); 
-               ResevResult thisR = new ResevResult(rs.getString("RoomCode"), rs.getString("RoomName"), rs.getString("bedType"), startDate, endDate); 
+               ResevResult thisR = new ResevResult(rs.getString("RoomCode"), rs.getString("RoomName"), rs.getString("bedType"), startDate, endDate, rs.getDouble("basePrice")); 
                results.add(thisR); 
                ctr++; 
             }
@@ -676,10 +670,9 @@ public class InnReservations {
          //read the remaining newline
          scanner.nextLine(); 
          ResevResult thisResult = results.get(selection-1);
-         double rate = 150.00; 
-         // double roomRate = calcWeekendRate(startDate, endDate); 
-         // add resev dates and fix formatting
-         System.out.format("%s %s %s %s %s Adults:%d Children:%d", firstName, lastName, thisResult.roomCode, thisResult.roomName, thisResult.bedType, numAdults, numChildren); 
+         double rate = thisResult.basePrice; 
+         double totalCost = calcRate(startDate, endDate, rate);
+         System.out.format("%s %s %s %s %s Adults:%d Children:%d Total Cost: %.2f", firstName, lastName, thisResult.roomCode, thisResult.roomName, thisResult.bedType, numAdults, numChildren, totalCost); 
          System.out.println(); 
          System.out.println("Enter CONFIRM or CANCEL:" );
          String option = scanner.nextLine(); 
@@ -702,7 +695,6 @@ public class InnReservations {
          } else {
             System.out.println("Cancelling reservation"); 
          }
-      }
       return; 
    } 
    
@@ -761,7 +753,7 @@ public class InnReservations {
       try(PreparedStatement stmt = conn.prepareStatement(queryString)){
          ResultSet rs = stmt.executeQuery();
          while(rs.next()){
-            results.add(new ResevResult(rs.getString("RoomCode"), rs.getString("RoomName"), rs.getString("bedType"), startDate, endDate)); 
+            results.add(new ResevResult(rs.getString("RoomCode"), rs.getString("RoomName"), rs.getString("bedType"), startDate, endDate, rs.getDouble("basePrice"))); 
          }
       }catch(SQLException e){
          System.out.println("Error searching for new room date");       
@@ -774,8 +766,21 @@ public class InnReservations {
       /*
       * TODO: Calculate weekend rate based on number of weekend days and week days 
       */ 
-      public double calcWeekendRate(String startDate, String endDate) {
-         return 0.0; 
+      public double calcRate(String startDate, String endDate, Double rate) {
+         LocalDate localStart = LocalDate.parse(startDate);
+         LocalDate localEnd = LocalDate.parse(endDate);  
+         double totalCost = 0; 
+         while(localStart.compareTo(localEnd) < 0){
+            localStart = localStart.plusDays(1); 
+            int day = localStart.getDayOfWeek().getValue(); 
+            if(day == 6 || day == 7){
+               totalCost += (rate * 1.1); 
+            } else {
+               totalCost += rate; 
+            }
+         }      
+         totalCost = totalCost * 1.18;
+         return totalCost; 
       }  
 
 
