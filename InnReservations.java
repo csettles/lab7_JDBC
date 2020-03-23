@@ -122,24 +122,20 @@ public class InnReservations {
 		StringBuilder sb2 = new StringBuilder("SELECT res.checkout, res.checkin from " + RESERVATIONS_TABLE + " res where res.Room = ? and res.code != ?");
 		LocalDate checkout;
 		LocalDate checkin;
-		try (Connection conn = DriverManager.getConnection(System.getenv("HP_JDBC_URL"),
-			System.getenv("HP_JDBC_USER"),
-			System.getenv("HP_JDBC_PW"))) {
-			try(PreparedStatement pstmt = conn.prepareStatement(sb2.toString())){
-				pstmt.setString(1, room);
-				pstmt.setString(2, code);
-				try (ResultSet rs = pstmt.executeQuery()){
-					while(rs.next()){
-						checkout = java.sql.Date.valueOf(rs.getString("CheckOut")).toLocalDate();
-						checkin = java.sql.Date.valueOf(rs.getString("CheckIn")).toLocalDate();
-						if(!((start.isAfter(checkout) | start.isEqual(checkout))|(end.isBefore(checkin) | end.isEqual(checkin)))){
-							return 0;
-						}   
-					}
+		try(PreparedStatement pstmt = conn.prepareStatement(sb2.toString())){
+			pstmt.setString(1, room);
+			pstmt.setString(2, code);
+			try (ResultSet rs = pstmt.executeQuery()){
+				while(rs.next()){
+					checkout = java.sql.Date.valueOf(rs.getString("CheckOut")).toLocalDate();
+					checkin = java.sql.Date.valueOf(rs.getString("CheckIn")).toLocalDate();
+					if(!((start.isAfter(checkout) | start.isEqual(checkout))|(end.isBefore(checkin) | end.isEqual(checkin)))){
+						return 0;
+					}   
 				}
 			}
-			return 1;
 		}
+		return 1;
 	}
 
 	private int validCheckOut(LocalDate end, String code) throws SQLException{
@@ -606,21 +602,21 @@ public class InnReservations {
 
          conn.setAutoCommit(false); 
          Scanner scanner = new Scanner(System.in); 
-         System.out.println("First name :");
+         System.out.print("First name: ");
          String firstName = scanner.nextLine();  
-         System.out.println("Last name :");
+         System.out.print("Last name: ");
          String lastName = scanner.nextLine();  
-         System.out.println("Room Code ('Any' to indicate no preference):");
+         System.out.print("Room Code ('Any' to indicate no preference): ");
          String roomCode = scanner.nextLine();  
-         System.out.println("Desired bed type ('Any' to indicate no preference):");
+         System.out.print("Desired bed type ('Any' to indicate no preference): ");
          String bedType = scanner.nextLine();
-         System.out.println("Begin date of stay YYYY-MM-DD:");
+         System.out.print("Begin date of stay YYYY-MM-DD: ");
          String startDate = scanner.nextLine();  
-         System.out.println("End date of stay YYYY-MM-DD:");
+         System.out.print("End date of stay YYYY-MM-DD: ");
          String endDate = scanner.nextLine();  
-         System.out.println("Number of children:");
+         System.out.print("Number of children: ");
          int numChildren = scanner.nextInt();  
-         System.out.println("Number of adults:");
+         System.out.print("Number of adults: ");
          int numAdults = scanner.nextInt(); 
 
 
@@ -795,6 +791,7 @@ public class InnReservations {
         System.out.println("\t4. Cancel a reservation");
         System.out.println("\t5. View reservation details");
         System.out.println("\t6. List monthly revenue");
+        System.out.println("Or q to quit\n");
         System.out.print("Please enter a command: ");
 
         String input = scanner.nextLine(); 
@@ -802,6 +799,8 @@ public class InnReservations {
         while(!input.equals("exit")) {
 
             switch(input){
+            	 case "q":
+            	 return;
                 case "1" : 
                 i.roomsAndRates();
                 break;
