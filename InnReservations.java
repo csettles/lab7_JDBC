@@ -52,14 +52,14 @@ public class InnReservations {
 	private void roomsAndRates() throws SQLException {
 		StringBuilder sb = new StringBuilder("with partA as " +
 			"(select room, roomname, round(sum(checkout-checkin)/180,2) popularity "+
-			"from lab7_rooms rooms join lab7_reservations reservations on roomcode=room " +
+			"from " + ROOMS_TABLE + " rooms join "+ RESERVATIONS_TABLE + " reservations on roomcode=room " +
 			"where checkout > date_sub(curdate(), interval 180 day) " +
 			"group by room "+
 			"order by popularity desc), " +
 
 			"partB as " +
 			"(select r1.room room, min(r1.checkout) nextAvailCheckin " +
-			"from lab7_reservations r1 join lab7_reservations r2 " +
+			"from " + RESERVATIONS_TABLE + " r1 join " + RESERVATIONS_TABLE + " r2 " +
 			"on r1.room=r2.room and r1.code<>r2.code " +
 			"where r1.checkout > curdate() and r2.checkout > curdate() " +
 			"and r1.checkout < r2.checkin " +
@@ -67,11 +67,11 @@ public class InnReservations {
 
 			"partC as " +
 			"(with mostRecents as (select room, max(checkout) co " +
-			"from lab7_rooms rooms join lab7_reservations reservations on roomcode=room " +
+			"from " + ROOMS_TABLE + " rooms join " + RESERVATIONS_TABLE + " reservations on roomcode=room " +
 			"group by room) " +
 
 			"select mostRecents.room, datediff(checkout,checkin) lengthStay, co mostRecentCheckout " +
-			"from lab7_reservations reservations join mostRecents " +
+			"from " + RESERVATIONS_TABLE + " reservations join mostRecents " +
 			"on reservations.room=mostRecents.room and co=checkout " +
 			"order by datediff(checkout, checkin) desc " +
 			") " +
@@ -586,7 +586,7 @@ public class InnReservations {
 		System.out.println("\t4. Cancel a reservation");
 		System.out.println("\t5. View reservation details");
 		System.out.println("\t6. List monthly revenue");
-		System.out.println("Please enter a command: ");
+		System.out.print("Please enter a command: ");
 
 		String input = scanner.nextLine(); 
 
@@ -616,7 +616,7 @@ public class InnReservations {
 				break;  
 			}      
 
-			System.out.println("Please enter a command:"); 
+			System.out.print("Please enter a command: "); 
 			input = scanner.nextLine();
 		}
 	}
